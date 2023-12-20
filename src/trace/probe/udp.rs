@@ -8,6 +8,7 @@ use super::Probe;
 pub struct UDPv4 {
     pub src: SocketAddrV4,
     pub dst: SocketAddrV4,
+    pub seq: u32,
 }
 
 #[derive(Debug)]
@@ -18,7 +19,7 @@ pub struct UDPv6 {
 
 impl UDPv4 {
     pub fn new(src: SocketAddrV4, dst: SocketAddrV4) -> Self {
-        Self { src, dst }
+        Self { src, dst , seq: 0 }
     }
 
     pub fn decode(ip: Ipv4Header, tail: &[u8]) -> Result<Probe> {
@@ -29,7 +30,7 @@ impl UDPv4 {
         let src = SocketAddrV4::new(src, pkt.source_port());
         let dst = SocketAddrV4::new(dst, pkt.destination_port());
 
-        Ok(Probe::from(UDPv4 { src, dst }))
+        Ok(Probe::from(UDPv4 { src, dst, seq: 0 }))
     }
 
     pub fn encode<'a>(&self, buf: &'a mut [u8], ttl: u8) -> Result<&'a mut [u8]> {
@@ -41,14 +42,15 @@ impl UDPv4 {
         let pkt = PacketBuilder::ipv4(src, dst, ttl);
         let pkt = pkt.udp(self.src.port(), self.dst.port());
 
-        let n = pkt.size(0);
-        pkt.write(&mut buf, &[])?;
+        let n = pkt.size(1);
+        pkt.write(&mut buf, &[self.seq as u8])?;
 
         Ok(&mut buf.into_inner()[..n])
     }
 
     pub fn increment(&mut self) {
-        self.dst.set_port(self.dst.port() + 1);
+        self.seq += 1;
+        // self.dst.set_port(self.dst.port() + 1);
     }
 }
 
