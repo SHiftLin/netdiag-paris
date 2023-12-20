@@ -1,8 +1,8 @@
-use std::io::Cursor;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
+use super::Probe;
 use anyhow::Result;
 use etherparse::*;
-use super::Probe;
+use std::io::Cursor;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 
 #[derive(Debug)]
 pub struct UDPv4 {
@@ -19,7 +19,7 @@ pub struct UDPv6 {
 
 impl UDPv4 {
     pub fn new(src: SocketAddrV4, dst: SocketAddrV4) -> Self {
-        Self { src, dst , seq: 0 }
+        Self { src, dst, seq: 0 }
     }
 
     pub fn decode(ip: Ipv4Header, tail: &[u8]) -> Result<Probe> {
@@ -42,8 +42,8 @@ impl UDPv4 {
         let pkt = PacketBuilder::ipv4(src, dst, ttl);
         let pkt = pkt.udp(self.src.port(), self.dst.port());
 
-        let n = pkt.size(1);
-        pkt.write(&mut buf, &[self.seq as u8])?;
+        let n = pkt.size(4);
+        pkt.write(&mut buf, &[self.seq as u8, 0, 0, 0])?;
 
         Ok(&mut buf.into_inner()[..n])
     }
